@@ -11,21 +11,35 @@ use App\Task;
 class TasksController extends Controller
 {
     public function index()
-    {
-        $tasks = Task::all();
+    {   
+        $data = [];
+        if (\Auth::check()) {
+            $user = \Auth::user();
+            $tasks = $user->tasks()->orderBy('created_at', 'desc')->paginate(10);
 
-        return view("tasks.index", [
-            "tasks" => $tasks,
-        ]);
+            $data = [
+                'user' => $user,
+                'tasks' => $tasks,
+            ];
+            $data += $this->counts($user);
+            return view('tasks.index', $data);
+        }else {
+            return view('welcome');
+        }
     }
     
     public function show($id)
     {
         $task = Task::find($id);
+        
+        if (\Auth::user()->id === $task->user_id) {
 
         return view("tasks.show", [
             "task" => $task,
         ]);
+        }else {
+            return redirect("/");
+        }
     }
     
     public function create()
@@ -45,6 +59,7 @@ class TasksController extends Controller
         ]);
             
         $task = new Task;
+        $task->user_id = $request->user()->id;
         $task->content = $request->content;
         $task->status = $request->status;
         $task->save();
@@ -69,6 +84,7 @@ class TasksController extends Controller
         ]);
         
         $task = Task::find($id);
+        $task->user_id = $request->user()->id;;
         $task->content = $request->content;
         $task->status = $request->status;
         $task->save();
